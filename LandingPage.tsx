@@ -356,7 +356,7 @@ const LandingPage: React.FC = () => {
               {/* Inviter Info */}
               <div className="relative z-10">
                 <p className="text-sm text-gray-400 font-['Roboto_Mono']">
-                  DISCOVERED BY @ATOMIS
+                  DISCOVERED BY @CHEMICA
                 </p>
               </div>
             </div>
@@ -413,7 +413,7 @@ const LandingPage: React.FC = () => {
                     ))}
                   </div>
                   <span className="font-['Orbitron'] font-bold text-lg">
-                    Atomis
+                    Chemica
                   </span>
                 </div>
 
@@ -424,7 +424,7 @@ const LandingPage: React.FC = () => {
                     <span className="font-['Orbitron'] font-bold text-white">
                       M
                     </span>
-                    <span className="text-white">Atomis</span>
+                    <span className="text-white">Chemica</span>
                   </div>
                 </div>
               </div>

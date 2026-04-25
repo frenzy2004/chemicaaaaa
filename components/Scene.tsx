@@ -7,6 +7,7 @@ import WaterSimulation from './WaterSimulation';
 import { SaltPile, SaltLattice } from './SaltSimulation'; 
 import AtomLabel from './AtomLabel';
 import { ElementData, TrackingData } from '../types';
+import { ELEMENTS } from '../constants';
 import * as THREE from 'three';
 
 interface SceneProps {
@@ -15,6 +16,363 @@ interface SceneProps {
   combinedElement: ElementData | null;
   trackingData: React.MutableRefObject<TrackingData>;
 }
+
+const getComponentData = (symbol: string) => {
+  return ELEMENTS.find(component => component.symbol === symbol) ?? {
+    symbol,
+    name: symbol,
+    color: '#ffffff',
+    atomicNumber: 0,
+    description: '',
+  };
+};
+
+const ComponentNode: React.FC<{
+  component: ElementData;
+  position: [number, number, number];
+  opacity: number;
+  pulseOffset?: number;
+}> = ({ component, position, opacity, pulseOffset = 0 }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const ringRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    const t = state.clock.elapsedTime + pulseOffset;
+    if (groupRef.current) {
+      const pulse = 1 + Math.sin(t * 2.5) * 0.04;
+      groupRef.current.scale.setScalar(pulse);
+    }
+    if (ringRef.current) {
+      ringRef.current.rotation.z += 0.015;
+      ringRef.current.rotation.y += 0.01;
+    }
+  });
+
+  return (
+    <group ref={groupRef} position={position}>
+      <mesh>
+        <sphereGeometry args={[0.42, 32, 32]} />
+        <meshStandardMaterial
+          color={component.color}
+          emissive={component.color}
+          emissiveIntensity={0.45}
+          roughness={0.25}
+          metalness={0.15}
+          transparent
+          opacity={opacity}
+        />
+      </mesh>
+      <mesh ref={ringRef}>
+        <torusGeometry args={[0.62, 0.018, 12, 80]} />
+        <meshBasicMaterial color={component.color} transparent opacity={opacity * 0.75} />
+      </mesh>
+      <Html position={[0, -0.78, 0]} center style={{ pointerEvents: 'none' }}>
+        <div className="flex flex-col items-center font-mono text-center">
+          <div
+            className="text-sm font-bold tracking-widest"
+            style={{
+              color: '#ffffff',
+              textShadow: `0 0 10px ${component.color}`,
+              opacity,
+            }}
+          >
+            {component.symbol}
+          </div>
+          <div className="text-[8px] uppercase tracking-[0.18em] text-cyan-100/70 whitespace-nowrap">
+            {component.name}
+          </div>
+        </div>
+      </Html>
+    </group>
+  );
+};
+
+const RouteTrafficPacket: React.FC<{
+  offset: number;
+  opacity: number;
+}> = ({ offset, opacity }) => {
+  const packetRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (!packetRef.current) return;
+    const cycle = (state.clock.elapsedTime * 0.42 + offset) % 1;
+    const x = THREE.MathUtils.lerp(-1.55, 1.55, cycle);
+    const y = Math.sin(cycle * Math.PI) * 0.18;
+    packetRef.current.position.set(x, y, 0.05);
+    packetRef.current.scale.setScalar(0.75 + Math.sin(cycle * Math.PI) * 0.35);
+  });
+
+  return (
+    <mesh ref={packetRef}>
+      <sphereGeometry args={[0.09, 16, 16]} />
+      <meshBasicMaterial color="#ffffff" transparent opacity={opacity} />
+    </mesh>
+  );
+};
+
+const RouteComponent: React.FC<{
+  scaleRef: React.MutableRefObject<number>;
+  opacityTarget: number;
+}> = ({ scaleRef, opacityTarget }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const api = getComponentData('API');
+  const lb = getComponentData('LB');
+
+  useFrame(() => {
+    if (!groupRef.current) return;
+    const targetScale = 1 + scaleRef.current * 0.45;
+    groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.12);
+    groupRef.current.rotation.y += 0.002;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.035, 0.035, 3.1, 24]} />
+        <meshBasicMaterial color="#2dd4bf" transparent opacity={opacityTarget * 0.7} />
+      </mesh>
+      <mesh rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.012, 0.012, 3.35, 16]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={opacityTarget * 0.4} />
+      </mesh>
+
+      <RouteTrafficPacket offset={0} opacity={opacityTarget} />
+      <RouteTrafficPacket offset={0.28} opacity={opacityTarget * 0.85} />
+      <RouteTrafficPacket offset={0.56} opacity={opacityTarget * 0.7} />
+
+      <ComponentNode component={api} position={[-1.8, 0, 0]} opacity={opacityTarget} pulseOffset={0} />
+      <ComponentNode component={lb} position={[1.8, 0, 0]} opacity={opacityTarget} pulseOffset={0.8} />
+
+      <Html position={[0, 1.05, 0]} center style={{ pointerEvents: 'none' }}>
+        <div
+          className="font-['Orbitron'] text-sm font-bold tracking-[0.35em] text-cyan-100"
+          style={{
+            opacity: opacityTarget,
+            textShadow: '0 0 14px rgba(45, 212, 191, 0.9)',
+          }}
+        >
+          ROUTE
+        </div>
+      </Html>
+    </group>
+  );
+};
+
+const EdgePulse: React.FC<{
+  offset: number;
+  opacity: number;
+}> = ({ offset, opacity }) => {
+  const pulseRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (!pulseRef.current) return;
+    const cycle = (state.clock.elapsedTime * 0.36 + offset) % 1;
+    pulseRef.current.position.set(0, THREE.MathUtils.lerp(-1.35, 1.35, cycle), 0.06);
+    pulseRef.current.scale.setScalar(0.65 + Math.sin(cycle * Math.PI) * 0.45);
+  });
+
+  return (
+    <mesh ref={pulseRef}>
+      <octahedronGeometry args={[0.12, 0]} />
+      <meshBasicMaterial color="#ffffff" transparent opacity={opacity} />
+    </mesh>
+  );
+};
+
+const EdgeComponent: React.FC<{
+  scaleRef: React.MutableRefObject<number>;
+  opacityTarget: number;
+}> = ({ scaleRef, opacityTarget }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const client = getComponentData('CLIENT');
+  const dns = getComponentData('DNS');
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    const targetScale = 1 + scaleRef.current * 0.45;
+    groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.12);
+    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.35) * 0.18;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <mesh>
+        <torusGeometry args={[1.15, 0.012, 12, 96]} />
+        <meshBasicMaterial color="#38bdf8" transparent opacity={opacityTarget * 0.35} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.15, 0.012, 12, 96]} />
+        <meshBasicMaterial color="#a78bfa" transparent opacity={opacityTarget * 0.28} />
+      </mesh>
+
+      <mesh>
+        <cylinderGeometry args={[0.03, 0.03, 2.7, 24]} />
+        <meshBasicMaterial color="#7dd3fc" transparent opacity={opacityTarget * 0.65} />
+      </mesh>
+      <mesh>
+        <cylinderGeometry args={[0.011, 0.011, 2.95, 16]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={opacityTarget * 0.35} />
+      </mesh>
+
+      <EdgePulse offset={0} opacity={opacityTarget} />
+      <EdgePulse offset={0.33} opacity={opacityTarget * 0.82} />
+      <EdgePulse offset={0.66} opacity={opacityTarget * 0.65} />
+
+      <ComponentNode component={client} position={[0, -1.65, 0]} opacity={opacityTarget} pulseOffset={0.1} />
+      <ComponentNode component={dns} position={[0, 1.65, 0]} opacity={opacityTarget} pulseOffset={0.9} />
+
+      <Html position={[1.35, 0, 0]} center style={{ pointerEvents: 'none' }}>
+        <div
+          className="font-['Orbitron'] text-sm font-bold tracking-[0.35em] text-cyan-100"
+          style={{
+            opacity: opacityTarget,
+            textShadow: '0 0 14px rgba(56, 189, 248, 0.9)',
+            writingMode: 'vertical-rl',
+          }}
+        >
+          EDGE
+        </div>
+      </Html>
+    </group>
+  );
+};
+
+const ConnectionBeam: React.FC<{
+  start: [number, number, number];
+  end: [number, number, number];
+  color: string;
+  opacity: number;
+  radius?: number;
+}> = ({ start, end, color, opacity, radius = 0.025 }) => {
+  const { midpoint, length, quaternion } = useMemo(() => {
+    const startVec = new THREE.Vector3(...start);
+    const endVec = new THREE.Vector3(...end);
+    const direction = endVec.clone().sub(startVec);
+    const midpoint = startVec.clone().add(endVec).multiplyScalar(0.5);
+    const quaternion = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      direction.clone().normalize()
+    );
+
+    return { midpoint, length: direction.length(), quaternion };
+  }, [start, end]);
+
+  return (
+    <group position={midpoint} quaternion={quaternion}>
+      <mesh>
+        <cylinderGeometry args={[radius, radius, length, 20]} />
+        <meshBasicMaterial color={color} transparent opacity={opacity} />
+      </mesh>
+      <mesh>
+        <cylinderGeometry args={[radius * 0.35, radius * 0.35, length * 1.04, 16]} />
+        <meshBasicMaterial color="#ffffff" transparent opacity={opacity * 0.45} />
+      </mesh>
+    </group>
+  );
+};
+
+const WebAppPacket: React.FC<{
+  offset: number;
+  opacity: number;
+  path: Array<[number, number, number]>;
+}> = ({ offset, opacity, path }) => {
+  const packetRef = useRef<THREE.Mesh>(null);
+
+  useFrame((state) => {
+    if (!packetRef.current) return;
+    const cycle = (state.clock.elapsedTime * 0.22 + offset) % 1;
+    const scaled = cycle * (path.length - 1);
+    const segment = Math.min(path.length - 2, Math.floor(scaled));
+    const localT = scaled - segment;
+    const start = new THREE.Vector3(...path[segment]);
+    const end = new THREE.Vector3(...path[segment + 1]);
+    const pos = start.lerp(end, localT);
+    pos.z += 0.08;
+    pos.y += Math.sin(localT * Math.PI) * 0.1;
+    packetRef.current.position.copy(pos);
+    packetRef.current.scale.setScalar(0.75 + Math.sin(cycle * Math.PI * 2) * 0.18);
+  });
+
+  return (
+    <mesh ref={packetRef}>
+      <sphereGeometry args={[0.08, 16, 16]} />
+      <meshBasicMaterial color="#ffffff" transparent opacity={opacity} />
+    </mesh>
+  );
+};
+
+const WebAppComponent: React.FC<{
+  scaleRef: React.MutableRefObject<number>;
+  opacityTarget: number;
+}> = ({ scaleRef, opacityTarget }) => {
+  const groupRef = useRef<THREE.Group>(null);
+  const client = getComponentData('CLIENT');
+  const dns = getComponentData('DNS');
+  const api = getComponentData('API');
+  const lb = getComponentData('LB');
+
+  const clientPos: [number, number, number] = [-2.25, -0.9, 0];
+  const dnsPos: [number, number, number] = [-2.25, 0.9, 0];
+  const apiPos: [number, number, number] = [0.45, 0.45, 0];
+  const lbPos: [number, number, number] = [2.35, 0.45, 0];
+  const path = [clientPos, dnsPos, apiPos, lbPos];
+
+  useFrame((state) => {
+    if (!groupRef.current) return;
+    const targetScale = 0.95 + scaleRef.current * 0.35;
+    groupRef.current.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), 0.12);
+    groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.28) * 0.12;
+  });
+
+  return (
+    <group ref={groupRef}>
+      <ConnectionBeam start={clientPos} end={dnsPos} color="#38bdf8" opacity={opacityTarget * 0.6} />
+      <ConnectionBeam start={dnsPos} end={apiPos} color="#7dd3fc" opacity={opacityTarget * 0.55} />
+      <ConnectionBeam start={apiPos} end={lbPos} color="#2dd4bf" opacity={opacityTarget * 0.65} />
+
+      <mesh position={[-0.95, 0, -0.05]}>
+        <boxGeometry args={[3.35, 2.45, 0.03]} />
+        <meshBasicMaterial color="#0f172a" transparent opacity={opacityTarget * 0.12} />
+      </mesh>
+      <mesh position={[1.42, 0.45, -0.05]}>
+        <boxGeometry args={[2.55, 1.25, 0.03]} />
+        <meshBasicMaterial color="#022c22" transparent opacity={opacityTarget * 0.1} />
+      </mesh>
+
+      <WebAppPacket offset={0} opacity={opacityTarget} path={path} />
+      <WebAppPacket offset={0.25} opacity={opacityTarget * 0.82} path={path} />
+      <WebAppPacket offset={0.5} opacity={opacityTarget * 0.68} path={path} />
+      <WebAppPacket offset={0.75} opacity={opacityTarget * 0.52} path={path} />
+
+      <ComponentNode component={client} position={clientPos} opacity={opacityTarget} pulseOffset={0} />
+      <ComponentNode component={dns} position={dnsPos} opacity={opacityTarget} pulseOffset={0.45} />
+      <ComponentNode component={api} position={apiPos} opacity={opacityTarget} pulseOffset={0.9} />
+      <ComponentNode component={lb} position={lbPos} opacity={opacityTarget} pulseOffset={1.35} />
+
+      <Html position={[-2.95, 0, 0]} center style={{ pointerEvents: 'none' }}>
+        <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-cyan-100/70" style={{ opacity: opacityTarget }}>
+          Edge Entry
+        </div>
+      </Html>
+      <Html position={[1.42, 1.25, 0]} center style={{ pointerEvents: 'none' }}>
+        <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-emerald-100/70" style={{ opacity: opacityTarget }}>
+          Routed Backend
+        </div>
+      </Html>
+      <Html position={[0, -1.75, 0]} center style={{ pointerEvents: 'none' }}>
+        <div
+          className="font-['Orbitron'] text-base font-bold tracking-[0.4em] text-white"
+          style={{
+            opacity: opacityTarget,
+            textShadow: '0 0 16px rgba(56, 189, 248, 0.95)',
+          }}
+        >
+          WEBAPP
+        </div>
+      </Html>
+    </group>
+  );
+};
 
 // --- BIG EXPLOSION SHADER (Mushroom Cloud) ---
 const bigExplosionVertexShader = `
@@ -521,6 +879,18 @@ const SceneContent: React.FC<SceneProps> = ({ leftElement, rightElement, combine
   });
 
   const renderElement = (element: ElementData, scaleRef: React.MutableRefObject<number>, opacity: number, isActive: boolean) => {
+    if (element.symbol === 'WEBAPP') {
+        return <WebAppComponent scaleRef={scaleRef} opacityTarget={opacity} />;
+    }
+
+    if (element.symbol === 'EDGE') {
+        return <EdgeComponent scaleRef={scaleRef} opacityTarget={opacity} />;
+    }
+
+    if (element.symbol === 'ROUTE') {
+        return <RouteComponent scaleRef={scaleRef} opacityTarget={opacity} />;
+    }
+
     if (element.symbol === 'H2O' && !combinedElement) return <H2OMolecule scaleRef={scaleRef} />;
     if (element.symbol === 'NaCl' && !combinedElement) return <SaltLattice scaleRef={scaleRef} />;
     if (element.symbol === 'HCl' && !combinedElement) return <HClMolecule scaleRef={scaleRef} />;
@@ -544,6 +914,18 @@ const SceneContent: React.FC<SceneProps> = ({ leftElement, rightElement, combine
     if (!combinedElement) return null;
     
     if (combinedElement.symbol === 'BOOM') return <BigExplosion />;
+
+    if (combinedElement.symbol === 'WEBAPP') {
+        return <WebAppComponent scaleRef={combinedPinchRef} opacityTarget={opacities.combined} />;
+    }
+
+    if (combinedElement.symbol === 'EDGE') {
+        return <EdgeComponent scaleRef={combinedPinchRef} opacityTarget={opacities.combined} />;
+    }
+
+    if (combinedElement.symbol === 'ROUTE') {
+        return <RouteComponent scaleRef={combinedPinchRef} opacityTarget={opacities.combined} />;
+    }
 
     if (combinedElement.symbol === 'H2O') {
         return <WaterSimulation trackingRef={trackingData} />;

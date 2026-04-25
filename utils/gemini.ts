@@ -1,7 +1,7 @@
 import { ElementData } from '../types';
 
 /**
- * Calls Gemini API to generate an explanation about a newly created element/compound
+ * Calls Gemini API to generate an explanation about a newly created system component.
  */
 // Access API key - vite.config.ts injects GEMINI_API_KEY as __GEMINI_API_KEY__
 declare const __GEMINI_API_KEY__: string | undefined;
@@ -19,11 +19,11 @@ export async function getElementExplanation(element: ElementData): Promise<strin
   }
 
   try {
-    const prompt = `You are a friendly chemistry lab assistant named Atom. A student just created ${element.name} (${element.symbol}) by mixing elements in a chemistry lab simulation. 
+    const prompt = `You are a friendly system design coach. A student just created ${element.name} (${element.symbol}) by combining components in a system design simulator. 
 
-Give a brief, engaging explanation (2-3 sentences max) about what ${element.name} is and why it's interesting or important. Be enthusiastic and educational, like you're teaching a curious student. Keep it conversational and fun.
+Give a brief, engaging explanation (2-3 sentences max) about what ${element.name} is and why it matters in distributed systems. Be enthusiastic and educational, like you're teaching a curious student. Keep it conversational and fun.
 
-Element details:
+Component details:
 - Name: ${element.name}
 - Symbol: ${element.symbol}
 - Description: ${element.description || 'N/A'}`;
@@ -69,8 +69,7 @@ Element details:
  */
 function getFallbackExplanation(element: ElementData): string {
   if (element.atomicNumber === 0) {
-    return `Amazing! You've created ${element.name}! This compound has unique properties that make it different from its individual elements.`;
+    return `Nice! You've created ${element.name}. This composed component gives the system a new capability by connecting smaller building blocks.`;
   }
-  return `Great discovery! ${element.name} is a fascinating element. ${element.description || 'It has many interesting properties and uses.'}`;
+  return `Great pick! ${element.name} is a useful system design component. ${element.description || 'It plays an important role in reliable distributed systems.'}`;
 }
-

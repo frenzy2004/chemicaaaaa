@@ -29,9 +29,11 @@ const AtomLabel: React.FC<AtomLabelProps> = ({ element, position }) => {
             <div className="h-px w-4 bg-white/20"></div>
         </div>
         
-        <div className="text-[8px] text-gray-500 mt-0.5 font-mono">
-          ATOMIC NO. {element.atomicNumber}
-        </div>
+        {element.atomicNumber > 0 && (
+          <div className="text-[8px] text-gray-500 mt-0.5 font-mono">
+            COMPONENT ID {element.atomicNumber}
+          </div>
+        )}
       </div>
     </Html>
   );

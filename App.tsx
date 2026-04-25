@@ -51,15 +51,23 @@ const App: React.FC = () => {
 
   // Load saved history and lab slots on mount
   useEffect(() => {
-    const history = JSON.parse(localStorage.getItem('chemLabHistory') || '[]');
+    const validCreatedSymbols = new Set(COMBINATIONS.map(c => c.result.symbol));
+    const validBaseSymbols = new Set(ELEMENTS.map(e => e.symbol));
+    const validSymbols = new Set([...validBaseSymbols, ...validCreatedSymbols]);
+
+    const history = JSON.parse(localStorage.getItem('chemLabHistory') || '[]')
+      .filter((item: ElementData) => validSymbols.has(item.symbol));
     setSavedElements(history);
+    localStorage.setItem('chemLabHistory', JSON.stringify(history));
     
     // Load dashboard slots (manually selected)
     const savedSlots = localStorage.getItem('labSlots');
     if (savedSlots) {
       try {
-        const parsed = JSON.parse(savedSlots);
+        const parsed = JSON.parse(savedSlots)
+          .filter((item: ElementData) => validSymbols.has(item.symbol));
         setLabSlots(parsed);
+        localStorage.setItem('labSlots', JSON.stringify(parsed));
         // Set initial elements from slots if available
         if (parsed.length > 0) {
           setLeftElement(parsed[0]);
@@ -76,29 +84,28 @@ const App: React.FC = () => {
     const savedCreatedSlots = localStorage.getItem('labCreatedSlots');
     if (savedCreatedSlots) {
       try {
-        const parsed = JSON.parse(savedCreatedSlots);
+        const parsed = JSON.parse(savedCreatedSlots)
+          .filter((item: ElementData) => validCreatedSymbols.has(item.symbol));
         setLabCreatedSlots(parsed);
+        localStorage.setItem('labCreatedSlots', JSON.stringify(parsed));
       } catch (e) {
         console.error('Failed to parse lab created slots', e);
       }
     }
   }, []);
 
-  // Strict Warning System
+  // Design Warning System
   useEffect(() => {
     if (gameState === 'dead') return;
     if (quizMode.active) return; // Disable warnings in Quiz Mode
     
     const symbols = [leftElement.symbol, rightElement.symbol];
-    const hasNa = symbols.includes('Na');
-    const hasH2O = symbols.includes('H2O');
+    const hasClient = symbols.includes('CLIENT');
+    const hasDatabase = symbols.includes('DB');
     
-    // Check if critical condition exists
-    if (hasNa && hasH2O && activeCatalyst === 'heat') {
-      setMessage("WARNING: DO NOT FUSE! HIGHLY EXPLOSIVE!");
-    } else if (hasNa && hasH2O) {
+    if (hasClient && hasDatabase) {
        if (!message.includes("WARNING")) {
-           setMessage("Hint: Heat might be dangerous...");
+           setMessage("WARNING: Clients should not talk directly to databases.");
        }
     }
   }, [leftElement, rightElement, activeCatalyst, gameState, message, quizMode.active]);
@@ -142,21 +149,25 @@ const App: React.FC = () => {
       let targetName = '';
 
       if (difficulty === 'easy') {
-          target = 'H2O';
-          targetName = 'Water';
+          target = 'FAST';
+          targetName = 'Cached Service';
       } else {
-          target = 'H2CO3';
-          targetName = 'Soda Water';
+          target = 'SCALE';
+          targetName = 'Scalable Service';
       }
 
-      // Filter slots to include 8 basic elements (atomicNumber > 0)
-      // And shuffle them so the answer isn't always in the first 2 slots
-      const slots = ELEMENTS.filter(e => e.atomicNumber > 0)
-          .slice(0, 8)
+      const trainingSymbols = difficulty === 'easy'
+          ? ['APP', 'CACHE', 'API', 'DB', 'LB', 'CLIENT', 'DNS', 'CDN']
+          : ['APP', 'CACHE', 'QUEUE', 'DB', 'API', 'LB', 'CLIENT', 'DNS'];
+
+      // Keep training modules bounded to the slot count while ensuring required components are present.
+      const slots = trainingSymbols
+          .map(symbol => ELEMENTS.find(e => e.symbol === symbol))
+          .filter((item): item is ElementData => Boolean(item))
           .sort(() => Math.random() - 0.5);
 
       setLabSlots(slots);
-      // Reset active elements to first available (now randomized)
+      // Reset active components to first available (now randomized)
       if (slots.length > 0) {
         setLeftElement(slots[0]);
         setRightElement(slots[1] || slots[0]);
@@ -199,20 +210,6 @@ const App: React.FC = () => {
     
     const symbols = [leftElement.symbol, rightElement.symbol];
 
-    // EXPLOSION TRAP
-    if (symbols.includes('Na') && symbols.includes('H2O') && activeCatalyst === 'heat') {
-        setGameState('dead');
-        setDeathReason("Sodium reacts violently with water under heat, causing a massive explosion.");
-        setCombinedElement({
-            symbol: 'BOOM',
-            name: 'EXPLOSION',
-            color: '#ff0000',
-            atomicNumber: 0,
-            description: 'Fatal Error'
-        });
-        return;
-    }
-
     const combo = COMBINATIONS.find(c => 
       (c.elements[0] === leftElement.symbol && c.elements[1] === rightElement.symbol) ||
       (c.elements[1] === leftElement.symbol && c.elements[0] === rightElement.symbol)
@@ -243,8 +240,8 @@ const App: React.FC = () => {
              }
 
              // Check if result is a valid intermediate step
-             // Valid intermediates for H2CO3: H2O, CO2
-             const validIntermediates = quizMode.difficulty === 'medium' ? ['H2O', 'CO2'] : [];
+             // Valid intermediates for SCALE: FAST, ASYNC
+             const validIntermediates = quizMode.difficulty === 'medium' ? ['FAST', 'ASYNC'] : [];
              
              if (!validIntermediates.includes(combo.result.symbol)) {
                  // WRONG MIX
@@ -266,14 +263,14 @@ const App: React.FC = () => {
         setMessage(`FUSION SUCCESS: ${combo.result.name}`);
         fusionErrorRef.current = false;
     } else {
-      // Quiz Failure for Incompatible Elements
+      // Quiz Failure for Incompatible Components
       if (quizMode.active) {
           setCombinedElement({
               symbol: 'X',
               name: 'Failed Quiz',
               color: '#ff0000',
               atomicNumber: 0,
-              description: 'Incompatible Mixture'
+              description: 'Incompatible Design'
           });
           setMessage("QUIZ FAILED! INCOMPATIBLE");
           fusionErrorRef.current = true;
@@ -288,12 +285,12 @@ const App: React.FC = () => {
           return;
       }
 
-      setMessage("Reaction Unstable: Incompatible");
+      setMessage("Design Unstable: Incompatible");
       fusionErrorRef.current = true; 
     }
   }, [leftElement, rightElement, combinedElement, activeCatalyst, gameState, quizMode]);
 
-  // Play success sound when elements are successfully combined
+  // Play success sound when components are successfully combined
   const prevCombinedElementRef = useRef<ElementData | null>(null);
   useEffect(() => {
     // Only play sound when combinedElement changes from null to a value (new combination)
@@ -316,14 +313,14 @@ const App: React.FC = () => {
     prevCombinedElementRef.current = combinedElement;
   }, [combinedElement, message]);
 
-  // Play error sound when elements cannot be mixed
+  // Play error sound when components cannot be composed
   const prevMessageRef = useRef<string>('');
   useEffect(() => {
     // Check if this is an error message
     const isError = message.includes('Failed') || 
                     message.includes('Incompatible') || 
                     message.includes('QUIZ FAILED') || 
-                    message.includes('Reaction Unstable');
+                    message.includes('Design Unstable');
     
     // Check if this is a new error message (different from previous)
     const isNewError = isError && message !== prevMessageRef.current;
@@ -366,7 +363,7 @@ const App: React.FC = () => {
         screenY = ny * screenH;
     }
 
-    // Check all interactable elements (Shelf + Catalyst)
+    // Check all interactable controls (Shelf + Catalyst)
     // Filtering based on mode (Dashboard vs Lab)
     const elements = document.querySelectorAll('.interactable-btn');
     for (let i = 0; i < elements.length; i++) {
@@ -404,7 +401,7 @@ const App: React.FC = () => {
           return;
       }
       if (hit.id.startsWith('dashboard-item-')) {
-           // Trigger click on the element to select it
+           // Trigger click on the component to select it
            hit.click();
            return;
       }

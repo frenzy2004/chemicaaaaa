@@ -374,7 +374,7 @@ const LandingPage: React.FC = () => {
                   1x
                 </span>
                 <span className="text-sm md:text-base font-['Roboto_Mono'] text-gray-300">
-                  Element to combine
+                  Component to combine
                 </span>
               </div>
 
@@ -394,8 +394,8 @@ const LandingPage: React.FC = () => {
 
               {/* Right */}
               <div className="text-right text-sm font-['Roboto_Mono'] text-gray-400 max-w-sm md:ml-auto">
-                <p>Start experimenting with your own elements</p>
-                <p>and create new compounds.</p>
+                <p>Start experimenting with system components</p>
+                <p>and compose larger architecture patterns.</p>
               </div>
             </div>
 

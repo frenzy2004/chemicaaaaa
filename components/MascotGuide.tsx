@@ -8,11 +8,11 @@ interface MascotGuideProps {
   message: string; // System message from App
   isDashboardOpen: boolean;
   trackingData: React.MutableRefObject<TrackingData>;
-  combinedElement: ElementData | null; // New element that was just created
+  combinedElement: ElementData | null; // New component that was just created
 }
 
 const MascotGuide: React.FC<MascotGuideProps> = ({ message, isDashboardOpen, trackingData, combinedElement }) => {
-  const [mascotText, setMascotText] = useState("Welcome to the Lab! I'm Atom.");
+  const [mascotText, setMascotText] = useState("Welcome to the design lab. Pick two components.");
   const [isVisible, setIsVisible] = useState(true);
   
   // Track the current Gemini explanation
@@ -26,9 +26,9 @@ const MascotGuide: React.FC<MascotGuideProps> = ({ message, isDashboardOpen, tra
   // Track the timeout to allow cleanup
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Handle new element creation - call Gemini API
+  // Handle new component creation - call Gemini API
   useEffect(() => {
-    // Only trigger when a new element is successfully created (not errors like BOOM or X)
+    // Only trigger when a new component is successfully created (not errors like BOOM or X)
     if (combinedElement && 
         combinedElement.symbol !== 'BOOM' && 
         combinedElement.symbol !== 'X' &&
@@ -55,7 +55,7 @@ const MascotGuide: React.FC<MascotGuideProps> = ({ message, isDashboardOpen, tra
             }).catch((error) => {
               console.error('Failed to get Gemini explanation:', error);
               geminiLoadingRef.current = false;
-              setGeminiExplanation(`Amazing! You've created ${combinedElement.name}! This is a fascinating compound with unique properties.`);
+              setGeminiExplanation(`Nice! You've created ${combinedElement.name}. This composed component adds a new capability to the system.`);
               setExplanationStartTime(Date.now());
             });
           }, remainingTime);
@@ -76,7 +76,7 @@ const MascotGuide: React.FC<MascotGuideProps> = ({ message, isDashboardOpen, tra
         console.error('Failed to get Gemini explanation:', error);
         geminiLoadingRef.current = false;
         // Use fallback
-        setGeminiExplanation(`Amazing! You've created ${combinedElement.name}! This is a fascinating compound with unique properties.`);
+        setGeminiExplanation(`Nice! You've created ${combinedElement.name}. This composed component adds a new capability to the system.`);
         setExplanationStartTime(Date.now());
       });
     }

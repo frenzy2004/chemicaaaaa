@@ -61,10 +61,10 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
     cameraAspect: 1.77
   });
 
-  // Sync selectedSlots with labSlots prop (which updates when new elements are created)
+  // Sync selectedSlots with labSlots prop (which updates when new components are created)
   useEffect(() => {
     setSelectedSlots(labSlots);
-  }, [labSlots]); // Update whenever labSlots changes (including when new elements are created in lab)
+  }, [labSlots]); // Update whenever labSlots changes (including when new components are created in lab)
 
   // Save slots to localStorage whenever they change
   useEffect(() => {
@@ -74,20 +74,20 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
   }, [selectedSlots]);
 
   useEffect(() => {
-    // 1. Base elements (Level 1) - assign level 1 explicitly
+    // 1. Base components (Level 1) - assign level 1 explicitly
     const baseElements = ELEMENTS.map(el => ({ ...el, level: 1 }));
     
-    // 2. Get all unique combination results (Level 2) - assign level 2 explicitly
-    const comboResults = COMBINATIONS.map(c => ({ ...c.result, level: 2 }));
+    // 2. Get all unique combined components (Level 2) - assign level 2 explicitly
+    const comboResults = COMBINATIONS.map(c => ({ ...c.result, level: c.result.level ?? 2 }));
     // Deduplicate by symbol
     const uniqueCombos = comboResults.filter((v, i, a) => a.findIndex(t => t.symbol === v.symbol) === i);
     
-    // 3. Combine base elements + compounds
+    // 3. Combine base components + composed components
     const fullList = [...baseElements, ...uniqueCombos];
     setAllDiscoverables(fullList);
   }, []);
 
-  // Effect to track selected element position
+  // Effect to track selected component position
   useEffect(() => {
     if (selectedInfo && isOpen) {
         // Small delay to allow render
@@ -99,7 +99,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
                 const centerX = (rect.left + rect.width / 2) / window.innerWidth;
                 const centerY = (rect.top + rect.height / 2) / window.innerHeight;
                 
-                // Update ref to simulate a "hand" at the element's position
+                // Update ref to simulate a "hand" at the component's position
                 // We use the 'left' hand slot for this target
                 dashboardTrackingRef.current.left.position.x = centerX;
                 dashboardTrackingRef.current.left.position.y = centerY;
@@ -120,16 +120,16 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
   ).length;
   
   const isUnlocked = (el: ElementData) => {
-    // Base elements (Level 1, atomicNumber > 0) are always unlocked
+    // Base components (Level 1, display id > 0) are always unlocked
     if (el.level === 1 && el.atomicNumber > 0) return true;
-    // Compounds (Level 2+) need to be discovered/saved
+    // Combined components (Level 2+) need to be discovered/saved
     return savedElements.some(s => s.symbol === el.symbol);
   };
 
-  // Group elements by Level and sort them
+  // Group components by Level and sort them
   const getElementsByLevel = (level: number) => {
-      // Level 1: Only base elements (from ELEMENTS array, atomicNumber > 0)
-      // Compounds (atomicNumber === 0) should NEVER appear in Level 1
+      // Level 1: Only base system components (from ELEMENTS array, display id > 0)
+      // Combined components (display id === 0) should NEVER appear in Level 1
       if (level === 1) {
           const baseElements = allDiscoverables.filter(el => 
               el.atomicNumber > 0 && (el.level === 1 || !el.level)
@@ -137,26 +137,23 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
           return baseElements.sort((a, b) => a.atomicNumber - b.atomicNumber);
       }
       
-      // Level 2: Only compounds (from COMBINATIONS, atomicNumber === 0)
-      // Base elements (atomicNumber > 0) should NEVER appear in Level 2
+      // Level 2: Only composed components from base component combinations.
       if (level === 2) {
-          const compounds = allDiscoverables.filter(el => 
-              el.atomicNumber === 0 && (el.level === 2 || !el.level)
-          );
-          return compounds.sort((a, b) => a.symbol.localeCompare(b.symbol));
+          const composedComponents = allDiscoverables.filter(el => el.level === 2);
+          return composedComponents.sort((a, b) => a.symbol.localeCompare(b.symbol));
       }
       
-      // Level 3+: Future complex compounds
+      // Level 3+: Future systems
       const filtered = allDiscoverables.filter(el => el.level === level);
       return filtered.sort((a, b) => a.symbol.localeCompare(b.symbol));
   };
 
-  // Check if element is in selected slots
+  // Check if component is in selected slots
   const isInSlot = (el: ElementData) => {
     return selectedSlots.some(s => s.symbol === el.symbol);
   };
 
-  // Toggle element in/out of slots
+  // Toggle component in/out of slots
   const toggleSlot = (el: ElementData) => {
     if (isInSlot(el)) {
       // Remove from slots
@@ -197,12 +194,12 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
       {/* Main Content Grid */}
       <div className="flex-1 w-full max-w-6xl flex gap-8 overflow-hidden">
           
-          {/* Element Grid - Grouped by Level */}
+          {/* Component Grid - Grouped by Level */}
           <div className="flex-1 overflow-y-auto pr-4 no-scrollbar flex flex-col gap-8 pb-20">
              
-             {/* LEVEL 1: BASE ELEMENTS */}
+             {/* LEVEL 1: BASE COMPONENTS */}
              <div>
-                <h3 className="text-sm font-mono text-cyan-500/80 tracking-widest mb-4 border-b border-cyan-500/20 pb-2">LEVEL 1 // BASE ELEMENTS</h3>
+                <h3 className="text-sm font-mono text-cyan-500/80 tracking-widest mb-4 border-b border-cyan-500/20 pb-2">LEVEL 1 // BASE COMPONENTS</h3>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
                     {getElementsByLevel(1).map(el => (
                         <DashboardItem 
@@ -218,9 +215,9 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
                 </div>
              </div>
 
-             {/* LEVEL 2: COMPOUNDS */}
+             {/* LEVEL 2: COMBINED COMPONENTS */}
              <div>
-                <h3 className="text-sm font-mono text-purple-500/80 tracking-widest mb-4 border-b border-purple-500/20 pb-2">LEVEL 2 // COMPOUNDS</h3>
+                <h3 className="text-sm font-mono text-purple-500/80 tracking-widest mb-4 border-b border-purple-500/20 pb-2">LEVEL 2 // COMBINED COMPONENTS</h3>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4">
                     {getElementsByLevel(2).map(el => (
                         <DashboardItem 
@@ -236,16 +233,21 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
                 </div>
              </div>
 
-             {/* LEVEL 3: COMING SOON */}
+             {/* LEVEL 3: SYSTEMS */}
              <div>
-                <h3 className="text-sm font-mono text-yellow-500/40 tracking-widest mb-4 border-b border-yellow-500/10 pb-2">LEVEL 3 // COMPLEX (LOCKED)</h3>
+                <h3 className="text-sm font-mono text-yellow-500/60 tracking-widest mb-4 border-b border-yellow-500/10 pb-2">LEVEL 3 // SYSTEMS</h3>
                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 opacity-90">
-                    <div className="aspect-square rounded-xl border border-white/5 bg-white/5 flex flex-col items-center justify-center relative grayscale cursor-not-allowed">
-                        <div className="text-2xl font-mono text-gray-700">?</div>
-                    </div>
-                     <div className="aspect-square rounded-xl border border-white/5 bg-white/5 flex flex-col items-center justify-center relative grayscale cursor-not-allowed">
-                        <div className="text-2xl font-mono text-gray-700">?</div>
-                    </div>
+                    {getElementsByLevel(3).map(el => (
+                        <DashboardItem 
+                            key={el.symbol} 
+                            el={el} 
+                            unlocked={isUnlocked(el)} 
+                            inSlot={isInSlot(el)}
+                            onClick={() => isUnlocked(el) && setSelectedInfo(el)}
+                            onToggleSlot={() => isUnlocked(el) && toggleSlot(el)}
+                            canAdd={selectedSlots.length < MAX_SLOTS}
+                        />
+                    ))}
                 </div>
              </div>
 
@@ -267,7 +269,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
                         id="dashboard-quiz-easy"
                     >
                         <div className="text-[10px] text-purple-200 font-mono">EASY</div>
-                        <div className="text-sm font-bold text-white">Create Water</div>
+                        <div className="text-sm font-bold text-white">Build Web App</div>
                     </button>
                     <button
                         onClick={() => {
@@ -278,7 +280,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
                          id="dashboard-quiz-medium"
                     >
                         <div className="text-[10px] text-purple-200 font-mono">MEDIUM</div>
-                        <div className="text-sm font-bold text-white">Soda Water</div>
+                        <div className="text-sm font-bold text-white">Scale Service</div>
                     </button>
                 </div>
              </div>
@@ -313,14 +315,14 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
                 </div>
                 {selectedSlots.length === 0 && (
                     <div className="text-xs text-yellow-400/70 font-mono mt-2 text-center">
-                        Select elements to add to lab slots
+                        Select components to add to lab slots
                     </div>
                 )}
              </div>
 
              {/* Mascot Area */}
              <div className="bg-gradient-to-b from-gray-900 to-black border border-gray-800 rounded-2xl p-6 relative overflow-hidden flex flex-col">
-                 {/* Background Element Symbol - Top Left, 50% space */}
+                 {/* Background Component Symbol - Top Left, 50% space */}
                  {selectedInfo && (
                      <div 
                          className="absolute -top-4 left-0 pointer-events-none"
@@ -355,13 +357,13 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
                  <div className="relative z-10 border-t border-white/10 pt-4">
                     <div className="flex items-center gap-2 mb-2">
                         <div className="w-2 h-2 bg-cyan-500 rounded-full animate-ping"></div>
-                        <div className="text-xs font-bold text-cyan-400 font-mono uppercase tracking-widest">Atom Analysis</div>
+                        <div className="text-xs font-bold text-cyan-400 font-mono uppercase tracking-widest">Component Analysis</div>
                     </div>
                     
                     <p className="text-xs text-gray-300 leading-relaxed font-mono min-h-[80px]">
                         {selectedInfo 
                           ? getMascotFact(selectedInfo)
-                          : "Select an element from the grid to view its properties. I'll analyze the chemical structure for you!"}
+                          : "Select a component from the grid to view its role in a system design."}
                     </p>
                  </div>
              </div>
@@ -437,6 +439,12 @@ const DashboardItem = ({
     }
   };
 
+  const symbolSizeClass = el.symbol.length > 6
+    ? 'text-sm md:text-base'
+    : el.symbol.length > 4
+      ? 'text-lg md:text-xl'
+      : 'text-2xl md:text-3xl';
+
   return (
     <div 
     id={`dashboard-item-${el.symbol}`} // Hook for hit test
@@ -464,7 +472,7 @@ const DashboardItem = ({
             {!inSlot && (
                 <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_#00ff00]"></div>
             )}
-            <div className="text-2xl md:text-3xl font-bold font-['Orbitron'] mb-1" style={{color: el.color}}>{el.symbol}</div>
+            <div className={`${symbolSizeClass} font-bold font-['Orbitron'] mb-1`} style={{color: el.color}}>{el.symbol}</div>
             <div className="text-[8px] md:text-[10px] font-mono text-gray-400 uppercase tracking-wider text-center px-1">{el.name}</div>
             {unlocked && (
                 <div className="absolute bottom-1 text-[8px] font-mono text-cyan-400/60">

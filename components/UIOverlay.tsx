@@ -473,9 +473,9 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
               ) : (
                 <div className="flex items-center justify-center px-4 py-8 text-center">
                   <div className="text-white/40 font-mono text-sm">
-                    <div className="mb-2">⚠️ NO ELEMENTS IN SLOTS</div>
+                    <div className="mb-2">NO COMPONENTS IN SLOTS</div>
                     <div className="text-xs">
-                      Open Dashboard to select up to 14 elements
+                      Open Dashboard to select up to 14 components
                     </div>
                   </div>
                 </div>
@@ -513,7 +513,7 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
           </div>
         </div>
 
-        {/* --- BOTTOM CATALYST PANEL --- */}
+        {/* --- BOTTOM MODIFIER PANEL --- */}
         <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-3 pointer-events-auto z-30">
           <div className="flex flex-row gap-6">
             <div
@@ -553,7 +553,7 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
             </div>
           </div>
           <div className="text-[9px] text-white/30 font-mono tracking-[0.3em] uppercase">
-            Catalysts (Hover to Select / Pinch to Off)
+            Modifiers (Hover to Select / Pinch to Off)
           </div>
         </div>
 

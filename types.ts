@@ -8,12 +8,9 @@ export interface ElementData {
   level?: number; // 1 = Base, 2 = Compound, 3 = Complex
 }
 
-export type CatalystType = 'none' | 'heat' | 'light' | 'chemical';
-
 export interface CombinationResult {
   elements: [string, string]; // symbols
   result: ElementData;
-  requiredCatalyst?: CatalystType;
 }
 
 export interface HandGestureState {

@@ -6,7 +6,7 @@ import ParticleSphere from './ParticleSphere';
 import WaterSimulation from './WaterSimulation'; 
 import { SaltPile, SaltLattice } from './SaltSimulation'; 
 import AtomLabel from './AtomLabel';
-import { ElementData, TrackingData, CatalystType } from '../types';
+import { ElementData, TrackingData } from '../types';
 import * as THREE from 'three';
 
 interface SceneProps {
@@ -14,249 +14,7 @@ interface SceneProps {
   rightElement: ElementData;
   combinedElement: ElementData | null;
   trackingData: React.MutableRefObject<TrackingData>;
-  activeCatalyst: CatalystType;
 }
-
-// --- OPTIMIZED FIRE SHADER (Heat) ---
-const fireVertexShader = `
-varying vec2 vUv;
-varying float vElevation;
-uniform float uTime;
-
-void main() {
-  vUv = uv;
-  vec3 pos = position;
-  
-  // Simple sine wave wind/wobble
-  float wobble = sin(uTime * 5.0 + pos.y * 2.0) * (pos.y + 1.0) * 0.1;
-  pos.x += wobble;
-  
-  // Taper the top to make a teardrop flame shape
-  float taper = 1.0 - smoothstep(0.0, 3.0, pos.y + 1.5);
-  pos.x *= taper; 
-
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-  vElevation = pos.y;
-}
-`;
-
-const fireFragmentShader = `
-varying vec2 vUv;
-varying float vElevation;
-uniform float uTime;
-
-void main() {
-  // Analytical flame shape gradient
-  float dist = abs(vUv.x - 0.5) * 2.0;
-  float shape = 1.0 - smoothstep(0.0, 0.8, dist);
-  
-  // Vertical gradient (Blue base -> Yellow Mid -> Red Tip)
-  vec3 colBase = vec3(0.1, 0.1, 1.0); // Blueish base
-  vec3 colMid = vec3(1.0, 0.8, 0.2);  // Bright yellow/orange
-  vec3 colTip = vec3(1.0, 0.2, 0.0);  // Red tip
-  
-  // Mix colors based on UV.y
-  vec3 col = mix(colBase, colMid, smoothstep(0.0, 0.3, vUv.y));
-  col = mix(col, colTip, smoothstep(0.3, 0.9, vUv.y));
-  
-  // Flicker alpha
-  float flicker = 0.8 + 0.2 * sin(uTime * 20.0);
-  
-  // Falloff at top and bottom
-  float alpha = shape * flicker;
-  alpha *= smoothstep(0.0, 0.1, vUv.y); // Fade base
-  alpha *= 1.0 - smoothstep(0.8, 1.0, vUv.y); // Fade tip
-
-  gl_FragColor = vec4(col, alpha);
-}
-`;
-
-const OptimizedFire: React.FC = () => {
-  const meshRef = useRef<THREE.Group>(null);
-  const uniforms = useMemo(() => ({
-    uTime: { value: 0 },
-  }), []);
-
-  useFrame((state) => {
-    uniforms.uTime.value = state.clock.elapsedTime;
-    if(meshRef.current) {
-        meshRef.current.lookAt(state.camera.position);
-    }
-  });
-
-  return (
-    <group ref={meshRef} position={[0, -4.0, -2]} scale={[2, 3, 2]}>
-         <mesh>
-           <planeGeometry args={[1, 2, 8, 8]} />
-           <shaderMaterial 
-             vertexShader={fireVertexShader} 
-             fragmentShader={fireFragmentShader} 
-             uniforms={uniforms} 
-             transparent 
-             depthWrite={false} 
-             side={THREE.DoubleSide} 
-             blending={THREE.AdditiveBlending}
-           />
-         </mesh>
-         <mesh rotation={[0, Math.PI/2, 0]}>
-           <planeGeometry args={[1, 2, 8, 8]} />
-           <shaderMaterial 
-             vertexShader={fireVertexShader} 
-             fragmentShader={fireFragmentShader} 
-             uniforms={uniforms} 
-             transparent 
-             depthWrite={false} 
-             side={THREE.DoubleSide} 
-             blending={THREE.AdditiveBlending}
-           />
-         </mesh>
-    </group>
-  );
-};
-
-// --- LIGHTNING SHADER (Light) ---
-const noiseFunction = `
-  vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-  vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
-  vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
-  float snoise(vec2 v) {
-    const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
-    vec2 i  = floor(v + dot(v, C.yy) );
-    vec2 x0 = v - i + dot(i, C.xx);
-    vec2 i1;
-    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
-    vec4 x12 = x0.xyxy + C.xxzz;
-    x12.xy -= i1;
-    i = mod289(i);
-    vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 )) + i.x + vec3(0.0, i1.x, 1.0 ));
-    vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy), dot(x12.zw,x12.zw)), 0.0);
-    m = m*m ;
-    m = m*m ;
-    vec3 x = 2.0 * fract(p * C.www) - 1.0;
-    vec3 h = abs(x) - 0.5;
-    vec3 ox = floor(x + 0.5);
-    vec3 a0 = x - ox;
-    m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );
-    vec3 g;
-    g.x  = a0.x  * x0.x  + h.x  * x0.y;
-    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
-    return 130.0 * dot(m, g);
-  }
-`;
-
-const lightningFragmentShader = `
-varying vec2 vUv;
-uniform float uTime;
-${noiseFunction}
-
-float fbm(vec2 st) {
-    float v = 0.0;
-    float a = 0.5;
-    vec2 shift = vec2(100.0);
-    mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.50));
-    for (int i = 0; i < 5; i++) {
-        v += a * snoise(st);
-        st = rot * st * 2.0 + shift;
-        a *= 0.5;
-    }
-    return v;
-}
-
-void main() {
-    vec2 uv = vUv;
-    vec2 t = vec2(uTime * 2.0, uTime * 5.0);
-    float noiseVal = fbm(uv * 10.0 + t);
-    float bolt = 1.0 - abs((uv.x - 0.5) + noiseVal * 0.2);
-    bolt = pow(bolt, 50.0);
-    float flash = step(0.9, fract(sin(uTime * 10.0)*43758.5453));
-    float glow = 1.0 - abs((uv.x - 0.5) + noiseVal * 0.2);
-    glow = pow(glow, 5.0) * 0.5;
-    vec3 col = vec3(0.5, 0.8, 1.0) * (bolt + glow);
-    col *= flash;
-    float alpha = smoothstep(0.0, 0.1, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
-    gl_FragColor = vec4(col, min(1.0, (bolt + glow) * alpha));
-}
-`;
-
-const OptimizedLightning: React.FC = () => {
-    const meshRef = useRef<THREE.Mesh>(null);
-    const uniforms = useMemo(() => ({
-        uTime: { value: 0 }
-    }), []);
-    useFrame((state) => {
-        uniforms.uTime.value = state.clock.elapsedTime;
-        if(meshRef.current) meshRef.current.lookAt(state.camera.position);
-    });
-    return (
-        <mesh ref={meshRef} position={[0, -3.0, -2]} scale={[4, 5, 1]}>
-            <planeGeometry args={[1, 1]} />
-            <shaderMaterial 
-                vertexShader={`varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`}
-                fragmentShader={lightningFragmentShader}
-                uniforms={uniforms}
-                transparent
-                depthWrite={false}
-                blending={THREE.AdditiveBlending}
-            />
-        </mesh>
-    );
-};
-
-// --- BUBBLES (Chemical) ---
-const OptimizedBubbles: React.FC = () => {
-    const meshRef = useRef<THREE.InstancedMesh>(null);
-    const count = 50;
-    const dummy = useMemo(() => new THREE.Object3D(), []);
-    const particles = useMemo(() => {
-        return new Array(count).fill(0).map(() => ({
-            pos: new THREE.Vector3((Math.random()-0.5)*2, -4, (Math.random()-0.5)*2),
-            speed: Math.random() * 0.05 + 0.02,
-            offset: Math.random() * 100
-        }));
-    }, []);
-
-    useFrame((state) => {
-        if(!meshRef.current) return;
-        const t = state.clock.elapsedTime;
-        particles.forEach((p, i) => {
-            p.pos.y += p.speed;
-            p.pos.x += Math.sin(t * 2.0 + p.offset) * 0.01;
-            if(p.pos.y > 1.0) {
-                p.pos.y = -4.5;
-                p.pos.x = (Math.random()-0.5)*2;
-            }
-            dummy.position.copy(p.pos);
-            const s = (Math.sin(t * 5.0 + p.offset) * 0.2 + 0.8) * 0.15;
-            dummy.scale.setScalar(s);
-            dummy.updateMatrix();
-            meshRef.current!.setMatrixAt(i, dummy.matrix);
-        });
-        meshRef.current.instanceMatrix.needsUpdate = true;
-    });
-
-    return (
-        <instancedMesh ref={meshRef} args={[undefined, undefined, count]} position={[0, 0, -2]}>
-            <sphereGeometry args={[1, 16, 16]} />
-            <meshStandardMaterial color="#00ff44" emissive="#004411" roughness={0.1} transparent opacity={0.6} />
-        </instancedMesh>
-    );
-};
-
-// --- CATALYST WRAPPER ---
-const CatalystParticles: React.FC<{ activeCatalyst: CatalystType }> = ({ activeCatalyst }) => {
-    return (
-        <group>
-            {activeCatalyst === 'heat' && <OptimizedFire />}
-            {activeCatalyst === 'light' && <OptimizedLightning />}
-            {activeCatalyst === 'chemical' && <OptimizedBubbles />}
-        </group>
-    );
-};
-
-const CatalystSimulation: React.FC<{ activeCatalyst: CatalystType }> = ({ activeCatalyst }) => {
-    // Wrapper to ensure clean unmounting/mounting if needed, though simpler now with shader opts
-    return <CatalystParticles activeCatalyst={activeCatalyst} />;
-};
 
 // --- BIG EXPLOSION SHADER (Mushroom Cloud) ---
 const bigExplosionVertexShader = `
@@ -694,7 +452,7 @@ const CollisionBurst: React.FC<{ color: string }> = ({ color }) => {
 }
 
 // --- SCENE CONTENT ---
-const SceneContent: React.FC<SceneProps> = ({ leftElement, rightElement, combinedElement, trackingData, activeCatalyst }) => {
+const SceneContent: React.FC<SceneProps> = ({ leftElement, rightElement, combinedElement, trackingData }) => {
   const leftGroupRef = useRef<THREE.Group>(null);
   const rightGroupRef = useRef<THREE.Group>(null);
   const combinedGroupRef = useRef<THREE.Group>(null);
@@ -829,8 +587,6 @@ const SceneContent: React.FC<SceneProps> = ({ leftElement, rightElement, combine
       <pointLight position={[10, 10, 10]} intensity={1.5} />
       <pointLight position={[-10, -10, -5]} intensity={0.5} color="#00ffff" />
       
-      <CatalystSimulation activeCatalyst={activeCatalyst} />
-
       {showBurst && <CollisionBurst color={combinedElement ? combinedElement.color : '#ffffff'} />}
 
       <group ref={leftGroupRef}>

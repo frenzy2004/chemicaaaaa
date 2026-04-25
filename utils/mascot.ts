@@ -49,6 +49,5 @@ export function getSystemMessage(status: string): string {
   if (status.includes("Incompatible")) return "Those components do not form a known pattern yet.";
   if (status.includes("SAVED")) return "Great work! I've added that to your collection.";
   if (status.includes("SWAPPED")) return "Component selected. What will you pair it with?";
-  if (status.includes("CATALYST ACTIVE")) return "Modifier engaged. This may unlock another design path.";
   return "Observing experiment parameters...";
 }

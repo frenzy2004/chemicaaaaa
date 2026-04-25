@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { ElementData, TrackingData, CatalystType, GameState } from "../types";
+import { ElementData, TrackingData, GameState } from "../types";
 import { ELEMENTS } from "../constants";
 import explosionMeme from "../assets/image.png";
 
@@ -9,7 +9,6 @@ interface UIOverlayProps {
   combinedElement: ElementData | null;
   message: string;
   trackingRef: React.MutableRefObject<TrackingData>;
-  activeCatalyst: CatalystType;
   labSlots: ElementData[]; // Dashboard slots (8 manually selected)
   labCreatedSlots: ElementData[]; // Lab-created slots (8 auto-discovered)
   isDashboardOpen: boolean;
@@ -19,77 +18,6 @@ interface UIOverlayProps {
   deathReason?: string;
   showSixtySeven?: boolean;
 }
-
-// Icons
-const FlameIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    className="w-10 h-10"
-    stroke="currentColor"
-    strokeWidth="1.5"
-  >
-    <path
-      d="M12 22c4.97 0 9-4.03 9-9 0-4.97-9-13-9-13S3 8.03 3 13c0 4.97 4.03 9 9 9z"
-      fill="currentColor"
-      fillOpacity="0.2"
-    />
-    <path
-      d="M12 22c4.97 0 9-4.03 9-9 0-4.97-9-13-9-13S3 8.03 3 13c0 4.97 4.03 9 9 9z"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <path
-      d="M12 18c2.21 0 4-1.79 4-4 0-2.21-4-6-4-6s-4 3.79-4 6c0 2.21 1.79 4 4 4z"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const BoltIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    className="w-10 h-10"
-    stroke="currentColor"
-    strokeWidth="1.5"
-  >
-    <path
-      d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-      fill="currentColor"
-      fillOpacity="0.2"
-    />
-    <path
-      d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
-const FlaskIcon = () => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    className="w-10 h-10"
-    stroke="currentColor"
-    strokeWidth="1.5"
-  >
-    <path
-      d="M8.5 2h7M12 2v6M6 22h12a2 2 0 002-2l-3-9a6 6 0 00-6-3h-1a6 6 0 00-6 3l-3 9a2 2 0 002 2z"
-      fill="currentColor"
-      fillOpacity="0.2"
-    />
-    <path
-      d="M8.5 2h7M12 2v6M6 22h12a2 2 0 002-2l-3-9a6 6 0 00-6-3h-1a6 6 0 00-6 3l-3 9a2 2 0 002 2z"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <circle cx="10" cy="16" r="1" fill="currentColor" />
-    <circle cx="14" cy="18" r="1" fill="currentColor" />
-  </svg>
-);
 
 const DashboardIcon = () => (
   <svg
@@ -151,7 +79,6 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
   combinedElement,
   message,
   trackingRef,
-  activeCatalyst,
   labSlots,
   labCreatedSlots,
   isDashboardOpen,
@@ -268,7 +195,7 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
         }
       }
 
-      // 1. Highlight Items (Shelf + Catalyst + Dashboard) on Hover
+      // 1. Highlight Items (Shelf + Dashboard) on Hover
       const interactables = document.querySelectorAll(".interactable-btn");
       interactables.forEach((item) => {
         const rect = item.getBoundingClientRect();
@@ -306,7 +233,6 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
         // Apply Hover Styles Direct to DOM
         const el = item as HTMLElement;
         const isShelfItem = el.id.startsWith("shelf-item-");
-        const isCatalystItem = el.id.startsWith("catalyst-btn-");
         const isDashboardItem = el.id.startsWith("dashboard-");
         const isToggle = el.id === "dashboard-toggle";
 
@@ -318,11 +244,6 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
             el.style.borderColor = "rgba(0, 255, 255, 0.9)";
             el.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
             el.style.boxShadow = `0 0 20px ${el.dataset.color || "#fff"}`;
-          } else if (isCatalystItem) {
-             const active = el.dataset.active === 'true';
-             el.style.borderColor = active ? el.dataset.activecolor! : 'white';
-             el.style.boxShadow = `0 0 15px ${active ? el.dataset.activecolor : 'white'}`;
-             el.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
           } else if (isToggle || isDashboardItem) {
             el.style.boxShadow = "0 0 15px rgba(34,211,238,0.4)";
           }
@@ -346,16 +267,6 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
               el.style.boxShadow = "none";
             }
             el.style.backgroundColor = "rgba(10, 10, 10, 0.7)";
-          } else if (isCatalystItem) {
-            const active = el.dataset.active === "true";
-            el.style.backgroundColor = active ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.6)';
-            el.style.borderColor = active
-              ? el.dataset.activecolor!
-              : "rgba(255,255,255,0.2)";
-            el.style.boxShadow = active
-              ? `0 0 20px ${el.dataset.activecolor}`
-              : "none";
-            el.style.color = active ? el.dataset.activecolor! : "#ffffff";
           } else if (isToggle) {
             el.style.boxShadow = "none";
           }
@@ -370,7 +281,6 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
   }, [
     leftElement,
     rightElement,
-    activeCatalyst,
     displayElements,
     isDashboardOpen,
   ]);
@@ -510,50 +420,6 @@ const UIOverlay: React.FC<UIOverlayProps> = ({
             <span className="font-['Orbitron'] text-sm font-bold tracking-wider">
               COLLECTION
             </span>
-          </div>
-        </div>
-
-        {/* --- BOTTOM MODIFIER PANEL --- */}
-        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-3 pointer-events-auto z-30">
-          <div className="flex flex-row gap-6">
-            <div
-              id="catalyst-btn-heat"
-              data-type="heat"
-              data-active={activeCatalyst === "heat"}
-              data-activecolor="#ff4400"
-              className="interactable-btn w-20 h-20 rounded-2xl border-2 flex items-center justify-center backdrop-blur-md transition-all duration-300 bg-black/40"
-            >
-              <div className="scale-75">
-                <FlameIcon />
-              </div>
-            </div>
-
-            <div
-              id="catalyst-btn-light"
-              data-type="light"
-              data-active={activeCatalyst === "light"}
-              data-activecolor="#ffff00"
-              className="interactable-btn w-20 h-20 rounded-2xl border-2 flex items-center justify-center backdrop-blur-md transition-all duration-300 bg-black/40"
-            >
-              <div className="scale-75">
-                <BoltIcon />
-              </div>
-            </div>
-
-            <div
-              id="catalyst-btn-chemical"
-              data-type="chemical"
-              data-active={activeCatalyst === "chemical"}
-              data-activecolor="#00ff44"
-              className="interactable-btn w-20 h-20 rounded-2xl border-2 flex items-center justify-center backdrop-blur-md transition-all duration-300 bg-black/40"
-            >
-              <div className="scale-75">
-                <FlaskIcon />
-              </div>
-            </div>
-          </div>
-          <div className="text-[9px] text-white/30 font-mono tracking-[0.3em] uppercase">
-            Modifiers (Hover to Select / Pinch to Off)
           </div>
         </div>
 

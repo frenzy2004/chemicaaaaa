@@ -6,7 +6,7 @@ import UIOverlay from './components/UIOverlay';
 import Dashboard from './components/Dashboard';
 import MascotGuide from './components/MascotGuide';
 import { ELEMENTS, COMBINATIONS } from './constants';
-import { TrackingData, ElementData, CatalystType, GameState } from './types';
+import { TrackingData, ElementData, GameState } from './types';
 import successChime from './assets/sounds/success-chime.mp3';
 import softError from './assets/sounds/soft-error.mp3';
 
@@ -19,7 +19,6 @@ const App: React.FC = () => {
   
   const [combinedElement, setCombinedElement] = useState<ElementData | null>(null);
   const [message, setMessage] = useState("LAB READY");
-  const [activeCatalyst, setActiveCatalyst] = useState<CatalystType>('none');
   const [savedElements, setSavedElements] = useState<ElementData[]>([]);
   
   const [gameState, setGameState] = useState<GameState>('playing');
@@ -108,7 +107,7 @@ const App: React.FC = () => {
            setMessage("WARNING: Clients should not talk directly to databases.");
        }
     }
-  }, [leftElement, rightElement, activeCatalyst, gameState, message, quizMode.active]);
+  }, [leftElement, rightElement, gameState, message, quizMode.active]);
 
   const saveElement = (element: ElementData) => {
       const history = JSON.parse(localStorage.getItem('chemLabHistory') || '[]');
@@ -216,12 +215,6 @@ const App: React.FC = () => {
     );
 
     if (combo) {
-        if (combo.requiredCatalyst && combo.requiredCatalyst !== activeCatalyst) {
-            setMessage(`Failed: Requires ${combo.requiredCatalyst.toUpperCase()} Catalyst`);
-            fusionErrorRef.current = true;
-            return;
-        }
-
         // QUIZ LOGIC
         if (quizMode.active && quizMode.targetSymbol) {
              // Check if result matches target
@@ -288,7 +281,7 @@ const App: React.FC = () => {
       setMessage("Design Unstable: Incompatible");
       fusionErrorRef.current = true; 
     }
-  }, [leftElement, rightElement, combinedElement, activeCatalyst, gameState, quizMode]);
+  }, [leftElement, rightElement, combinedElement, gameState, quizMode]);
 
   // Play success sound when components are successfully combined
   const prevCombinedElementRef = useRef<ElementData | null>(null);
@@ -363,7 +356,7 @@ const App: React.FC = () => {
         screenY = ny * screenH;
     }
 
-    // Check all interactable controls (Shelf + Catalyst)
+    // Check all interactable controls.
     // Filtering based on mode (Dashboard vs Lab)
     const elements = document.querySelectorAll('.interactable-btn');
     for (let i = 0; i < elements.length; i++) {
@@ -406,15 +399,8 @@ const App: React.FC = () => {
            return;
       }
 
-      // 2. Catalyst Logic
-      if (hit.id.startsWith('catalyst-btn-')) {
-          const type = hit.dataset.type as CatalystType;
-          // Toggle off if same, otherwise set new
-          setActiveCatalyst(prev => prev === type ? 'none' : type);
-          setMessage(`${type.toUpperCase()} CATALYST ACTIVE`);
-      }
-      // 3. Shelf Logic - Allow hover selection for shelf items
-      else if (hit.id.startsWith('shelf-item-')) {
+      // 2. Shelf Logic - Allow hover selection for shelf items
+      if (hit.id.startsWith('shelf-item-')) {
           const symbol = hit.dataset.symbol;
           
           // Check both dashboard slots and lab-created slots
@@ -606,7 +592,6 @@ const App: React.FC = () => {
                 rightElement={rightElement} 
                 combinedElement={combinedElement}
                 trackingData={trackingDataRef}
-                activeCatalyst={activeCatalyst}
             />
             <UIOverlay
                 leftElement={leftElement}
@@ -614,7 +599,6 @@ const App: React.FC = () => {
                 combinedElement={combinedElement}
                 message={message}
                 trackingRef={trackingDataRef}
-                activeCatalyst={activeCatalyst}
                 labSlots={labSlots}
                 labCreatedSlots={labCreatedSlots}
                 isDashboardOpen={isDashboardOpen}

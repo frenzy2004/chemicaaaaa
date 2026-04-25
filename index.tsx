@@ -9,26 +9,28 @@ const convexUrl = import.meta.env.VITE_CONVEX_URL || "";
 
 if (!convexUrl && import.meta.env.DEV) {
   console.warn(
-    "⚠️ VITE_CONVEX_URL is not set. Please run 'npx convex dev' to set up Convex."
+    "VITE_CONVEX_URL is not set. Convex sync is disabled for this session."
   );
 }
 
-const convex = new ConvexReactClient(convexUrl);
+const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
 
 const rootElement = document.getElementById("root");
 if (!rootElement) throw new Error("Root element not found");
 
 const root = ReactDOM.createRoot(rootElement);
 
+const routes = (
+  <BrowserRouter>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/play" element={<App />} />
+    </Routes>
+  </BrowserRouter>
+);
+
 root.render(
   <React.StrictMode>
-    <ConvexProvider client={convex}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/play" element={<App />} />
-        </Routes>
-      </BrowserRouter>
-    </ConvexProvider>
+    {convex ? <ConvexProvider client={convex}>{routes}</ConvexProvider> : routes}
   </React.StrictMode>
 );

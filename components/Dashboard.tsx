@@ -178,7 +178,7 @@ const Dashboard: React.FC<DashboardProps> = ({ isOpen, onClose, savedElements, l
       <div className="w-full max-w-6xl flex justify-between items-end mb-8 border-b border-white/20 pb-4">
         <div>
           <h1 className="text-4xl md:text-6xl font-['Orbitron'] font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-            ATOMIS LAB
+            CHEMICA LAB
           </h1>
           <p className="text-sm font-mono text-cyan-200/60 tracking-widest mt-2">RESEARCH & SYNTHESIS INTERFACE</p>
         </div>

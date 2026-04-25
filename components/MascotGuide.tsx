@@ -175,21 +175,24 @@ const MascotGuide: React.FC<MascotGuideProps> = ({ message, isDashboardOpen, tra
   if (!isVisible) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end pointer-events-none overflow-visible ">
+    <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end pointer-events-none overflow-visible">
        {/* Speech Bubble */}
-       <div className="mb-2 max-w-xs bg-white/10 backdrop-blur-md border border-cyan-500/30 p-4 rounded-t-2xl rounded-bl-2xl rounded-br-none text-right shadow-[0_0_20px_rgba(34,211,238,0.2)] animate-bounce-slight origin-bottom-right transform transition-all">
-          <p className="text-cyan-100 font-mono text-sm leading-relaxed">
+       <div className="relative mb-0 max-w-[18.5rem] bg-slate-950/85 backdrop-blur-xl border border-cyan-300/35 px-4 py-3 rounded-2xl rounded-br-md text-left shadow-[0_14px_38px_rgba(0,0,0,0.34),0_0_20px_rgba(95,244,241,0.14)] animate-bounce-slight origin-bottom-right transform transition-all">
+          <span className="absolute left-3 top-3 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(95,244,241,0.9)]"></span>
+          <p className="pl-4 text-cyan-50 font-mono text-[12px] leading-relaxed">
             {mascotText}
           </p>
+          <div className="absolute -bottom-2 right-7 h-4 w-4 rotate-45 border-b border-r border-cyan-300/35 bg-slate-950/85"></div>
        </div>
 
        {/* 3D Avatar Container */}
-       <div className="w-40 h-40 relative group pointer-events-auto overflow-visible">
+       <div className="w-36 h-36 relative group pointer-events-auto overflow-visible">
           {/* Glow Effect */}
-          <div className="absolute inset-0 bg-cyan-500/20 rounded-full blur-3xl group-hover:bg-cyan-500/40 transition-all duration-500"></div>
+          <div className="absolute inset-x-4 bottom-2 top-10 bg-cyan-300/20 rounded-full blur-2xl group-hover:bg-cyan-300/30 transition-all duration-500"></div>
+          <div className="absolute bottom-3 left-1/2 h-5 w-20 -translate-x-1/2 rounded-full bg-black/45 blur-md"></div>
           
           {/* Container */}
-          <div className="w-full h-full relative z-10 pointer-events-auto">
+          <div className="w-full h-full relative z-10 pointer-events-auto drop-shadow-[0_14px_22px_rgba(0,0,0,0.4)]">
              <MascotAvatar trackingData={trackingData} />
           </div>
        </div>

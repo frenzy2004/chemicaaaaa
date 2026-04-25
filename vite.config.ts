@@ -13,6 +13,10 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
+      optimizeDeps: {
+        include: ['stats.js', 'use-sync-external-store/shim/with-selector.js'],
+        exclude: ['@react-three/drei'],
+      },
       css: {
         postcss: {
           plugins: [],
